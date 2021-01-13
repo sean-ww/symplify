@@ -8,7 +8,7 @@ use PhpParser\Node;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Stmt\Throw_;
 use PHPStan\Analyser\Scope;
-use ReflectionClass;
+use PHPStan\Reflection\ReflectionProvider;
 use Symplify\Astral\Naming\SimpleNameResolver;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
@@ -29,9 +29,15 @@ final class NoDefaultExceptionRule extends AbstractSymplifyRule
      */
     private $simpleNameResolver;
 
-    public function __construct(SimpleNameResolver $simpleNameResolver)
+    /**
+     * @var ReflectionProvider
+     */
+    private $reflectionProvider;
+
+    public function __construct(SimpleNameResolver $simpleNameResolver, ReflectionProvider $reflectionProvider)
     {
         $this->simpleNameResolver = $simpleNameResolver;
+        $this->reflectionProvider = $reflectionProvider;
     }
 
     /**
@@ -62,8 +68,8 @@ final class NoDefaultExceptionRule extends AbstractSymplifyRule
             return [];
         }
 
-        $reflectionClass = new ReflectionClass($className);
-        if (! $reflectionClass->isInternal()) {
+        $classReflection = $this->reflectionProvider->getClass($className);
+        if ($classReflection->isInternal()) {
             return [];
         }
 
