@@ -6,6 +6,7 @@ use Nette\Utils\Strings;
 use PhpCsFixer\Fixer\Comment\HeaderCommentFixer;
 use ReflectionClass;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
+use Symplify\EasyCodingStandard\Exception\DependencyInjection\Extension\ServiceKeywordsException;
 use Symplify\PackageBuilder\Strings\StringFormatConverter;
 
 /**
@@ -57,12 +58,7 @@ final class CheckerServiceParametersShifter
     {
         $this->checkerConfigurationGuardian = new CheckerConfigurationGuardian();
         $this->stringFormatConverter = new StringFormatConverter();
-
-        /** @var string[] $serviceKeywordsProperty */
-        $serviceKeywordsProperty = (new ReflectionClass(YamlFileLoader::class))
-            ->getStaticProperties()['serviceKeywords'];
-
-        $this->serviceKeywords = $serviceKeywordsProperty;
+        $this->serviceKeywords = $this->getServiceKeywordsProperty();
     }
 
     /**
@@ -223,5 +219,31 @@ final class CheckerServiceParametersShifter
         }
 
         return Strings::replace($value, '#@#', '@@');
+    }
+
+    /**
+     * @return array
+     * @throws ServiceKeywordsException
+     */
+    private function getServiceKeywordsProperty()
+    {
+        $reflectionClass = new ReflectionClass(YamlFileLoader::class);
+
+        if(isset($reflectionClass->getStaticProperties()['serviceKeywords'])) {
+            /** @var string[] $serviceKeywordsProperty */
+            $serviceKeywordsProperty = $reflectionClass->getStaticProperties()['serviceKeywords'];
+        }
+
+        if (is_array($serviceKeywordsProperty)) {
+            return $serviceKeywordsProperty;
+        }
+
+        /** @var string[] $serviceKeywordsProperty */
+        $serviceKeywordsProperty = $reflectionClass->getConstant('SERVICE_KEYWORDS');
+        if (is_array($serviceKeywordsProperty)) {
+            return $serviceKeywordsProperty;
+        }
+
+        throw new ServiceKeywordsException('Unable to locate YamlFileLoader service keywords.');
     }
 }
